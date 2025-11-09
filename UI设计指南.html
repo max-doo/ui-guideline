@@ -1,0 +1,1288 @@
+<!-- Chosen Palette: Warm Neutrals (Gray, Indigo) -->
+<!-- Application Structure Plan: The application is a single-page app (SPA) with a persistent sidebar. The structure is now split into two main 'pages' (Part 1 and Part 2), which are toggled via the sidebar's main headings. Within each 'page', all content is visible on a single scrolling pane. The sidebar's sub-links act as anchor links to scroll to specific sections within the active page. This structure addresses the user's request for two integrated content pages. -->
+<!-- Visualization & Content Choices: Report Info -> UI Component Definitions. Goal -> Education/Demonstration. Viz/Presentation Method -> Interactive HTML/CSS/JS examples (e.g., live buttons, tabs, modals). Interaction -> User can click, hover, and toggle the examples. The new interaction is a 'Scroll Spy': as the user scrolls the main content, the sidebar links automatically highlight to show the current section. Justification -> This combines the user's request for integrated content pages with the high-usability feature of scroll-based navigation. Library/Method -> Vanilla JS for all interactions. -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI设计术语交互式指南</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        /* -- NEW STYLES -- */
+        .part-content.hidden {
+            display: none;
+        }
+        .part-content.active {
+            display: block;
+        }
+        .part-links.hidden {
+            display: none;
+        }
+        .part-toggle {
+            transition: all 0.2s ease-in-out;
+            width: 100%;
+            text-align: left;
+        }
+        .part-toggle.active {
+            color: #4338ca;
+            font-weight: 600;
+        }
+        .scroll-target {
+            scroll-margin-top: 1.5rem; 
+        }
+        main {
+            scroll-behavior: smooth;
+        }
+        /* -- END NEW STYLES -- */
+        .sidebar-link.active {
+            background-color: #eef2ff;
+            color: #4338ca;
+            font-weight: 600;
+        }
+        .sidebar-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .sidebar-link:hover {
+            background-color: #f4f4f5;
+        }
+        .term-card {
+            background-color: white;
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+        }
+        .term-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .term-definition {
+            color: #4b5563;
+            margin-top: 0.5rem;
+        }
+        .example-container {
+            border: 1px solid #d1d5db;
+            background-color: #f9fafb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+        .example-title {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        .phone-simulator {
+            width: 320px;
+            height: 568px;
+            border: 8px solid #1f2937;
+            border-radius: 2rem;
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+        .phone-content {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        .phone-bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: 56px;
+            border-top: 1px solid #e5e7eb;
+            background-color: #f9fafb;
+        }
+        .phone-fab {
+            position: absolute;
+            bottom: 70px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background-color: #4f46e5;
+            color: white;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .phone-bottom-app-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background-color: #4f46e5;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            justify-content: space-between;
+        }
+        .phone-action-sheet, .phone-bottom-sheet, .phone-modal-overlay, .phone-drawer-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.3);
+            display: none;
+            align-items: flex-end;
+            z-index: 10;
+        }
+        .phone-modal-overlay {
+            align-items: center;
+            justify-content: center;
+        }
+        .phone-action-sheet-content {
+            background-color: white;
+            width: 100%;
+            border-top-left-radius: 1rem;
+            border-top-right-radius: 1rem;
+            animation: slideUp 0.3s ease-out;
+        }
+        .phone-bottom-sheet-content {
+            background-color: white;
+            width: 100%;
+            height: 60%;
+            border-top-left-radius: 1rem;
+            border-top-right-radius: 1rem;
+            padding: 1rem;
+            animation: slideUp 0.3s ease-out;
+        }
+        .phone-modal-content {
+            background-color: white;
+            width: 80%;
+            border-radius: 1rem;
+            padding: 1rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+        .phone-drawer-overlay {
+            justify-content: flex-start;
+        }
+        .phone-drawer-content {
+            width: 75%;
+            height: 100%;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            animation: slideIn 0.3s ease-out;
+        }
+        .phone-snackbar {
+            position: absolute;
+            bottom: 20px;
+            left: 30%;
+            transform: translateX(-30%);
+            background-color: #1f2937;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            display: none;
+            animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+            z-index: 20;
+        }
+        .phone-toast {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            display: none;
+            animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+            z-index: 20;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="flex h-screen">
+        <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 p-5 overflow-y-auto hidden md:block">
+            <h1 class="text-xl font-bold text-indigo-700 mb-6">UI设计指南</h1>
+            <nav class="flex flex-col gap-1">
+                <button class="part-toggle active text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-4 hover:text-indigo-600" data-target="part-1-content">第一部分：通用术语</button>
+                <div class="part-links active flex flex-col gap-1" id="part-1-links">
+                    <a href="#section-1-1" class="sidebar-link nav-link px-3 py-2 rounded-md text-sm" data-scroll-target="section-1-1">1. 核心原则与概念</a>
+                    <a href="#section-1-2" class="sidebar-link nav-link px-3 py-2 rounded-md text-sm" data-scroll-target="section-1-2">2. 布局与栅格</a>
+                    <a href="#section-1-3" class="sidebar-link nav-link px-3 py-2 rounded-md text-sm" data-scroll-target="section-1-3">3. 界面组件</a>
+                    <a href="#section-1-4" class="sidebar-link nav-link px-3 py-2 rounded-md text-sm" data-scroll-target="section-1-4">4. 视觉设计</a>
+                    <a href="#section-1-5" class="sidebar-link nav-link px-3 py-2 rounded-md text-sm" data-scroll-target="section-1-5">5. 交互与动态</a>
+                    <a href="#section-1-6" class="sidebar-link nav-link px-3 py-2 rounded-md text-sm" data-scroll-target="section-1-6">6. 流程与产出物</a>
+                    <a href="#section-1-7" class="sidebar-link nav-link px-3 py-2 rounded-md text-sm" data-scroll-target="section-1-7">7. 平台与规范</a>
+                </div>
+
+                <button class="part-toggle text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-6 hover:text-indigo-600" data-target="part-2-content">第二部分：手机专有组件</button>
+                <div class="part-links hidden flex flex-col gap-1" id="part-2-links">
+                    <a href="#section-2-1" class="sidebar-link nav-link px-3 py-2 rounded-md text-sm" data-scroll-target="section-2-1">1. 底部导航与动作</a>
+                    <a href="#section-2-2" class="sidebar-link nav-link px-3 py-2 rounded-md text-sm" data-scroll-target="section-2-2">2. 页面覆盖与弹出</a>
+                    <a href="#section-2-3" class="sidebar-link nav-link px-3 py-2 rounded-md text-sm" data-scroll-target="section-2-3">3. 导航与内容切换</a>
+                    <a href="#section-2-4" class="sidebar-link nav-link px-3 py-2 rounded-md text-sm" data-scroll-target="section-2-4">4. 系统与信息提示</a>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-6 md:p-10 overflow-y-auto" style="scroll-behavior: smooth;">
+            <button id="menu-toggle" class="md:hidden p-2 mb-4 bg-white rounded border border-gray-200">
+                ☰ 菜单
+            </button>
+
+            <div id="content-container">
+                <div id="part-1-content" class="part-content active">
+                    <section id="section-1-1" class="scroll-target">
+                        <h1 class="text-3xl font-bold mb-6">1. 核心原则与概念</h1>
+                        <p class="text-lg text-gray-600 mb-8">这是UI设计的基础，是指导所有设计决策的“为什么”。</p>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">UI / UX (用户界面 / 用户体验)</h2>
+                            <p class="term-definition">UI是用户与产品交互的媒介；UX是用户在使用过程中建立的主观感受。UI是实现良好UX的关键部分。</p>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Affordance (示能性) / Signifier (表意指涉) / Feedback (反馈)</h2>
+                            <p class="term-definition">
+                                **示能性**：物体“暗示”如何使用它（按钮看起来可按）。<br>
+                                **表意指涉**：明确的“信号”（按钮上的文字）。<br>
+                                **反馈**：操作后的响应（按钮变色）。
+                            </p>
+                            <div class="example-container">
+                                <button id="feedback-button" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md hover:bg-indigo-700 active:bg-indigo-800 active:shadow-inner transition-all">
+                                    点击我
+                                </button>
+                                <span id="feedback-message" class="text-sm text-gray-600"></span>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Visual Hierarchy (视觉层级)</h2>
+                            <p class="term-definition">通过大小、颜色、对比度等手段，组织信息的相对重要性，引导用户的视线。</p>
+                            <div class="example-container">
+                                <h1 class="text-3xl font-bold">最重要的标题</h1>
+                                <h2 class="text-xl font-semibold text-gray-700">次要标题</h2>
+                                <p class="text-base text-gray-500">这是正文内容，重要性最低。</p>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Design Philosophy (设计哲学)</h2>
+                            <p class="term-definition">
+                                **拟物化 (Skeuomorphism):** 模仿现实世界物体的外观和质感。<br>
+                                **扁平化 (Flat Design):** 追求简洁、抽象，使用色块。
+                            </p>
+                            <div class="example-container">
+                                <div id="philosophy-box" class="w-32 h-32 rounded-lg flex items-center justify-center text-white font-bold text-lg transition-all duration-300" 
+                                     style="background: linear-gradient(145deg, #f0f0f0, #cacaca); box-shadow: 10px 10px 20px #bebebe, -10px -10px 20px #ffffff; color: #555;">
+                                    拟物
+                                </div>
+                                <button id="philosophy-toggle" class="bg-gray-200 py-2 px-4 rounded-md text-sm font-medium">切换到扁平化</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="section-1-2" class="scroll-target">
+                        <h1 class="text-3xl font-bold mb-6">2. 布局与栅格</h1>
+                        <p class="text-lg text-gray-600 mb-8">这是页面的“骨架”，决定了信息如何被组织和呈现。</p>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">Grid System (栅格系统)</h2>
+                            <p class="term-definition">通过规律的列 (Columns) 和间距 (Gutters) 来规范地排版内容，确保对齐和一致性。</p>
+                            <div class="example-container">
+                                <div class="grid grid-cols-3 gap-4 w-full">
+                                    <div class="bg-indigo-100 p-4 rounded-md text-center">列 1</div>
+                                    <div class="bg-indigo-100 p-4 rounded-md text-center">列 2</div>
+                                    <div class="bg-indigo-100 p-4 rounded-md text-center">列 3</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Responsive Design (RWD / 响应式设计)</h2>
+                            <p class="term-definition">界面布局能根据不同设备的屏幕尺寸自动调整。请尝试缩放您的浏览器窗口查看效果。</p>
+                            <div class="example-container">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                                    <div class="bg-pink-100 p-4 rounded-md">
+                                        <h3 class="font-bold">内容块 1</h3>
+                                        <p>在小屏幕上，我们各占一行。</p>
+                                    </div>
+                                    <div class="bg-pink-100 p-4 rounded-md">
+                                        <h3 class="font-bold">内容块 2</h3>
+                                        <p>在（md）及以上尺寸屏幕上，我们并排显示。</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">Whitespace (留白) / Alignment (对齐)</h2>
+                            <p class="term-definition">**留白**：元素周围的“空白”区域，用于降低视觉噪音。**对齐**：元素对齐的原则，创建有序界面。</p>
+                            <div class="example-container items-start">
+                                <h3 class="example-title">左对齐（推荐）</h3>
+                                <div class="flex flex-col items-start gap-2">
+                                    <div class="bg-white p-2 shadow rounded">第一项</div>
+                                    <div class="bg-white p-2 shadow rounded">第二项</div>
+                                    <div class="bg-white p-2 shadow rounded">更长一点的第三项</div>
+                                </div>
+                                <h3 class="example-title mt-4">居中对齐（阅读性差）</h3>
+                                <div class="flex flex-col items-center gap-2 w-full">
+                                    <div class="bg-white p-2 shadow rounded">第一项</div>
+                                    <div class="bg-white p-2 shadow rounded">第二项</div>
+                                    <div class="bg-white p-2 shadow rounded">更长一点的第三项</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="section-1-3" class="scroll-target">
+                        <h1 class="text-3xl font-bold mb-6">3. 界面组件</h1>
+                        <p class="text-lg text-gray-600 mb-8">这些是构成界面的“积木”，是用户直接交互的元素。</p>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Input Controls (输入控件)</h2>
+                            <div class="example-container flex-wrap flex-row gap-6">
+                                <div>
+                                    <h3 class="example-title">Button (按钮)</h3>
+                                    <button class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md">点击</button>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Text Field (文本框)</h3>
+                                    <input type="text" placeholder="输入单行文本..." class="border border-gray-300 rounded-md p-2">
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Text Area (文本域)</h3>
+                                    <textarea placeholder="输入多行文本..." class="border border-gray-300 rounded-md p-2"></textarea>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Checkbox (复选框)</h3>
+                                    <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> 选项一</label>
+                                    <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> 选项二</label>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Radio Button (单选按钮)</h3>
+                                    <label class="flex items-center gap-2"><input type="radio" name="radio-group"> 选项 A</label>
+                                    <label class="flex items-center gap-2"><input type="radio" name="radio-group"> 选项 B</label>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Toggle (开关)</h3>
+                                    <button id="toggle-button" class="w-12 h-6 rounded-full bg-gray-300 flex items-center p-1 transition-all" data-toggled="false">
+                                        <span class="w-4 h-4 rounded-full bg-white transform transition-all"></span>
+                                    </button>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Dropdown (下拉菜单)</h3>
+                                    <select class="border border-gray-300 rounded-md p-2">
+                                        <option>选择一项</option>
+                                        <option>选项 1</option>
+                                        <option>选项 2</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Slider (滑块)</h3>
+                                    <input type="range" min="0" max="100" value="50" class="w-full" id="slider-input">
+                                    <span class="text-sm text-gray-600">值: <span id="slider-value">50</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Navigation Components (导航组件)</h2>
+                            <div class="example-container">
+                                <h3 class="example-title">Navbar (导航栏) & Sidebar (侧边栏)</h3>
+                                <p class="text-sm text-gray-600">本应用顶部的标题栏和左侧的导航菜单就是 Navbar 和 Sidebar 的例子。</p>
+                                
+                                <h3 class="example-title mt-4">Breadcrumbs (面包屑)</h3>
+                                <nav class="text-sm text-gray-500">
+                                    <a href="#" class="hover:underline">首页</a> &gt; 
+                                    <a href="#" class="hover:underline">第一部分</a> &gt; 
+                                    <span class="font-medium text-gray-700">界面组件</span>
+                                </nav>
+
+                                <h3 class="example-title mt-4">Tabs (标签页)</h3>
+                                <div class="w-full">
+                                    <div class="border-b border-gray-200">
+                                        <nav class="flex -mb-px gap-4">
+                                            <button class="tab-button active py-2 px-4 border-b-2 border-indigo-600 text-indigo-600 font-medium" data-target="tab-1">标签页 1</button>
+                                            <button class="tab-button py-2 px-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-target="tab-2">标签页 2</button>
+                                        </nav>
+                                    </div>
+                                    <div class="py-4">
+                                        <div id="tab-1" class="tab-content active">这是标签页 1 的内容。</div>
+                                        <div id="tab-2" class="tab-content" style="display: none;">这是标签页 2 的内容。</div>
+                                    </div>
+                                </div>
+                                
+                                <h3 class="example-title mt-4">Pagination (分页)</h3>
+                                <nav class="flex items-center gap-2">
+                                    <a href="#" class="px-3 py-1 border rounded-md bg-white text-gray-600">&laquo;</a>
+                                    <a href="#" class="px-3 py-1 border rounded-md bg-indigo-600 text-white">1</a>
+                                    <a href="#" class="px-3 py-1 border rounded-md bg-white text-gray-600">2</a>
+                                    <a href="#" class="px-3 py-1 border rounded-md bg-white text-gray-600">3</a>
+                                    <span class="px-3 py-1">...</span>
+                                    <a href="#" class="px-3 py-1 border rounded-md bg-white text-gray-600">&raquo;</a>
+                                </nav>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Informational Components (信息组件)</h2>
+                            <div class="example-container flex-wrap flex-row gap-6 items-start">
+                                <div>
+                                    <h3 class="example-title">Icon (图标)</h3>
+                                    <span class="text-3xl" title="这是一个齿轮图标">⚙️</span>
+                                </div>
+                                <div class="relative">
+                                    <h3 class="example-title">Tooltip (工具提示)</h3>
+                                    <button class="bg-gray-200 py-2 px-4 rounded-md" id="tooltip-button">悬停在我身上</button>
+                                    <div id="tooltip" class="absolute hidden bg-black text-white text-xs rounded py-1 px-2 bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap">
+                                        这是一个工具提示
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Modal (模态框)</h3>
+                                    <button id="open-modal" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md">打开模态框</button>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Notification (通知)</h3>
+                                    <div class="p-4 bg-blue-100 border border-blue-300 text-blue-800 rounded-md">
+                                        这是一条通知信息。
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Progress Bar (进度条)</h3>
+                                    <div class="w-48 bg-gray-200 rounded-full h-2.5">
+                                        <div class="bg-indigo-600 h-2.5 rounded-full" style="width: 65%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Badge (徽标)</h3>
+                                    <div class="relative">
+                                        <span class="text-3xl">🔔</span>
+                                        <span class="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">3</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Containers (容器)</h2>
+                            <div class="example-container flex-wrap flex-row gap-6 items-start">
+                                <div>
+                                    <h3 class="example-title">Card (卡片)</h3>
+                                    <div class="w-64 bg-white border border-gray-200 rounded-lg shadow-md p-5">
+                                        <h4 class="font-bold text-lg mb-2">卡片标题</h4>
+                                        <p class="text-sm text-gray-600">这是卡片中的一些描述性内容。</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Accordion (折叠面板)</h3>
+                                    <div class="w-64">
+                                        <div class="border border-gray-200 rounded-md">
+                                            <button class="accordion-toggle w-full flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100">
+                                                <span class="font-medium">第一项</span>
+                                                <span>+</span>
+                                            </button>
+                                            <div class="accordion-content p-3 border-t border-gray-200" style="display: none;">
+                                                这是第一项折叠面板的内容。
+                                            </div>
+                                        </div>
+                                        <div class="border border-t-0 border-gray-200 rounded-md">
+                                            <button class="accordion-toggle w-full flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100">
+                                                <span class="font-medium">第二项</span>
+                                                <span>+</span>
+                                            </button>
+                                            <div class="accordion-content p-3 border-t border-gray-200" style="display: none;">
+                                                这是第二项折叠面板的内容。
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="section-1-4" class="scroll-target">
+                        <h1 class="text-3xl font-bold mb-6">4. 视觉设计</h1>
+                        <p class="text-lg text-gray-600 mb-8">这是界面的“皮肤”，决定了产品的风格和美感。</p>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">Typography (字体排印)</h2>
+                            <p class="term-definition">字体族、字重、字号、行高等。合理的排印能极大提升可读性。</p>
+                            <div class="example-container">
+                                <p id="typography-example" class="text-base font-normal" style="line-height: 1.6;">这是一段用于演示字体排印的文本。</p>
+                                <div class="flex gap-4 mt-2">
+                                    <button id="font-bigger" class="bg-gray-200 py-1 px-3 rounded-md text-sm">字号 +</button>
+                                    <button id="font-smaller" class="bg-gray-200 py-1 px-3 rounded-md text-sm">字号 -</button>
+                                    <button id="font-bolder" class="bg-gray-200 py-1 px-3 rounded-md text-sm">字重 +</button>
+                                    <button id="font-lighter" class="bg-gray-200 py-1 px-3 rounded-md text-sm">字重 -</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Color (色彩)</h2>
+                            <p class="term-definition">**主色 (Primary):** 定义品牌调性。**辅色 (Secondary):** 次要元素。**点缀色 (Accent):** 突出元素。</p>
+                            <div class="example-container flex-row gap-4">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-20 h-20 bg-indigo-600 rounded-md"></div>
+                                    <span class="text-sm mt-2">主色</span>
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <div class="w-20 h-20 bg-gray-500 rounded-md"></div>
+                                    <span class="text-sm mt-2">辅色</span>
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <div class="w-20 h-20 bg-pink-500 rounded-md"></div>
+                                    <span class="text-sm mt-2">点缀色</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="section-1-5" class="scroll-target">
+                        <h1 class="text-3xl font-bold mb-6">5. 交互与动态</h1>
+                        <p class="text-lg text-gray-600 mb-8">这是界面的“灵魂”，定义了用户如何与界面互动以及界面的“感觉”。</p>
+
+                        <div class="term-card">
+                            <h2 class="term-title">State (状态)</h2>
+                            <p class="term-definition">UI元素在不同情境下的视觉表现。</p>
+                            <div class="example-container flex-wrap flex-row gap-6">
+                                <div>
+                                    <h3 class="example-title">Default (默认)</h3>
+                                    <button class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md shadow-md">默认</button>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Hover (悬停)</h3>
+                                    <button class="bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md shadow-md">悬停</button>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Pressed (按下)</h3>
+                                    <button class="bg-indigo-800 text-white font-semibold py-2 px-4 rounded-md shadow-inner">按下</button>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Disabled (禁用)</h3>
+                                    <button class="bg-gray-300 text-gray-500 font-semibold py-2 px-4 rounded-md" disabled>禁用</button>
+                                </div>
+                                <div>
+                                    <h3 class="example-title">Focus (聚焦)</h3>
+                                    <input type="text" placeholder="点击我" class="border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Microinteraction (微交互)</h2>
+                            <p class="term-definition">非常小型的、单一任务的交互时刻。</p>
+                            <div class="example-container">
+                                <button id="like-button" class="text-3xl transition-transform transform">
+                                    ♡
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">Animation (动画) / Transition (过渡)</h2>
+                            <p class="term-definition">从一个界面状态平滑地变化到另一个。</p>
+                            <div class="example-container">
+                                <div id="animation-box" class="w-20 h-20 bg-indigo-500 rounded-md transition-all duration-500 ease-in-out"></div>
+                                <button id="animation-trigger" class="bg-gray-200 py-1 px-3 rounded-md text-sm mt-2">移动</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="section-1-6" class="scroll-target">
+                        <h1 class="text-3xl font-bold mb-6">6. 流程与产出物</h1>
+                        <p class="text-lg text-gray-600 mb-8">这是UI设计师“如何工作”的术语。</p>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">Wireframe (线框图) vs. Mockup (视觉稿)</h2>
+                            <p class="term-definition">**线框图**：低保真，只关注布局和功能。**视觉稿**：高保真，包含完整的视觉设计。</p>
+                            <div class="example-container flex-row gap-6">
+                                <div class="w-48">
+                                    <h3 class="example-title">线框图</h3>
+                                    <div class="border-2 border-dashed border-gray-400 rounded-md p-3">
+                                        <div class="h-8 bg-gray-300 rounded mb-2"></div>
+                                        <div class="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
+                                        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                                    </div>
+                                </div>
+                                <div class="w-48">
+                                    <h3 class="example-title">视觉稿</h3>
+                                    <div class="border border-gray-200 rounded-md p-3 bg-white shadow">
+                                        <div class="h-8 bg-indigo-600 rounded mb-2"></div>
+                                        <div class="h-4 bg-gray-700 rounded w-3/4 mb-1"></div>
+                                        <div class="h-4 bg-gray-500 rounded w-1/2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Design System (设计系统) / Style Guide (风格指南)</h2>
+                            <p class="term-definition">**设计系统**：一套完整的规范、可复用的组件库和设计原则。**风格指南**：规定了视觉设计的规范（色彩、字体等）。</p>
+                            <p class="text-sm text-gray-600 mt-2">这个网页本身就是基于一个简单的风格指南（如统一的按钮、卡片样式）构建的。</p>
+                        </div>
+                    </section>
+
+                    <section id="section-1-7" class="scroll-target">
+                        <h1 class="text-3xl font-bold mb-6">7. 平台与规范</h1>
+                        <p class="text-lg text-gray-600 mb-8">UI设计必须在特定的“画布”上进行，并遵循其规则。</p>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">Native (原生应用) vs. Web (网页应用)</h2>
+                            <p class="term-definition">**原生**：为特定操作系统（iOS, Android）开发。**Web**：通过浏览器访问。</p>
+                        </div>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">Accessibility (A11Y / 无障碍设计)</h2>
+                            <p class="term-definition">确保残障人士也能无障碍地使用产品。</p>
+                            <div class="example-container">
+                                <label for="accessible-input" class="text-sm font-medium">清晰的标签:</label>
+                                <input id="accessible-input" type="text" placeholder="输入您的名字" class="border border-gray-300 rounded-md p-2" aria-label="输入您的名字">
+                                <p class="text-xs text-gray-500 mt-1">这个输入框有关联的 `label` 和 `aria-label` 属性，方便屏幕阅读器读取。</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="part-2-content" class="part-content hidden">
+                    <section id="section-2-1" class="scroll-target">
+                        <h1 class="text-3xl font-bold mb-6">1. 底部导航与动作</h1>
+                        <p class="text-lg text-gray-600 mb-8">这是移动端最核心的区域，因为它是单手持握时，拇指最容易触达的“黄金热区”。</p>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Bottom Navigation Bar (底部导航栏)</h2>
+                            <p class="term-definition">位于屏幕底部的水平条，用于在应用的一级页面之间切换。</p>
+                            <div class="example-container items-center">
+                                <div class="phone-simulator">
+                                    <div class="phone-content"><p class="text-center">首页内容</p></div>
+                                    <div class="phone-bottom-nav">
+                                        <div class="text-center text-indigo-600">🏠<br><span class="text-xs">首页</span></div>
+                                        <div class="text-center text-gray-500">🔍<br><span class="text-xs">发现</span></div>
+                                        <div class="text-center text-gray-500">👤<br><span class="text-xs">我的</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Floating Action Button (FAB / 浮动操作按钮)</h2>
+                            <p class="term-definition">悬浮的圆形按钮，代表页面的主要操作（如“创建”）。</p>
+                            <div class="example-container items-center">
+                                <div class="phone-simulator">
+                                    <div class="phone-content"><p>列表内容...</p></div>
+                                    <div class="phone-fab">+</div>
+                                    <div class="phone-bottom-nav">
+                                        <div class="text-center text-indigo-600">🏠<br><span class="text-xs">首页</span></div>
+                                        <div class="text-center text-gray-500">👤<br><span class="text-xs">我的</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Bottom App Bar (底部应用栏)</h2>
+                            <p class="term-definition">位于底部的“工具栏”，可承载导航、菜单和FAB。</p>
+                            <div class="example-container items-center">
+                                <div class="phone-simulator">
+                                    <div class="phone-content"></div>
+                                    <div class="phone-bottom-app-bar">
+                                        <span>☰</span>
+                                        <span>⋮</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="section-2-2" class="scroll-target">
+                        <h1 class="text-3xl font-bold mb-6">2. 页面覆盖与弹出</h1>
+                        <p class="text-lg text-gray-600 mb-8">在不完全离开当前页面的情况下，展示额外信息或执行特定任务。</p>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Action Sheet (操作表 / 动作面板)</h2>
+                            <p class="term-definition">从屏幕底部滑出的一个列表，提供与情境相关的操作选项。</p>
+                            <div class="example-container items-center">
+                                <div class="phone-simulator" id="phone-sim-1">
+                                    <div class="phone-content">
+                                        <button class="bg-indigo-600 text-white py-2 px-4 rounded-md w-full" data-target="action-sheet-1">显示操作表</button>
+                                    </div>
+                                    <div class="phone-action-sheet" id="action-sheet-1">
+                                        <div class="phone-action-sheet-content">
+                                            <button class="w-full text-left p-3 border-b text-blue-600">操作一</button>
+                                            <button class="w-full text-left p-3 border-b text-blue-600">操作二</button>
+                                            <button class="w-full text-left p-3 border-b text-red-600">删除</button>
+                                            <button class="w-full text-left p-3 font-bold" data-close="action-sheet-1">取消</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Bottom Sheet (底部弹窗 / 底部表单)</h2>
+                            <p class="term-definition">从底部滑出，可承载复杂的内容，如表单或列表。</p>
+                            <div class="example-container items-center">
+                                <div class="phone-simulator" id="phone-sim-2">
+                                    <div class="phone-content">
+                                        <button class="bg-indigo-600 text-white py-2 px-4 rounded-md w-full" data-target="bottom-sheet-1">显示底部表单</button>
+                                    </div>
+                                    <div class="phone-bottom-sheet" id="bottom-sheet-1">
+                                        <div class="phone-bottom-sheet-content">
+                                            <h3 class="font-bold text-lg">选择规格</h3>
+                                            <p class="text-sm text-gray-600 mt-2">这里可以放表单、选项等...</p>
+                                            <button class="mt-4 bg-gray-200 py-2 px-4 rounded w-full" data-close="bottom-sheet-1">关闭</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Modal (模态框 - 移动端)</h2>
+                            <p class="term-definition">通常从底部“卡片式”滑入，传达“临时任务”的层级感。</p>
+                            <div class="example-container items-center">
+                                <div class="phone-simulator" id="phone-sim-3">
+                                    <div class="phone-content">
+                                        <button class="bg-indigo-600 text-white py-2 px-4 rounded-md w-full" data-target="modal-1">显示模态框</D>
+                                    </div>
+                                    <div class="phone-modal-overlay" id="modal-1">
+                                        <div class="phone-modal-content">
+                                            <h3 class="font-bold text-lg">确认操作</h3>
+                                            <p class="text-sm text-gray-600 mt-2">您确定要继续吗？</p>
+                                            <div class="flex gap-2 mt-4">
+                                                <button class="flex-1 bg-gray-200 py-2 px-4 rounded" data-close="modal-1">取消</button>
+                                                <button class="flex-1 bg-indigo-600 text-white py-2 px-4 rounded" data-close="modal-1">确定</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <section id="section-2-3" class="scroll-target">
+                        <h1 class="text-3xl font-bold mb-6">3. 导航与内容切换</h1>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">Segmented Control (分段控件)</h2>
+                            <p class="term-definition">一组水平排列的按钮，合并成一个整体，用于切换同级别视图。</p>
+                            <div class="example-container items-center">
+                                <div class="phone-simulator">
+                                    <div class="p-3">
+                                        <div class="flex w-full bg-gray-200 rounded-md p-0.5" id="segmented-control-1">
+                                            <button class="flex-1 py-1 px-2 rounded-md bg-white shadow text-sm font-medium" data-target="seg-1-1">视图一</button>
+                                            <button class="flex-1 py-1 px-2 text-sm text-gray-600" data-target="seg-1-2">视图二</button>
+                                        </div>
+                                        <div class="mt-4">
+                                            <div id="seg-1-1" class="seg-content">这是视图一的内容。</div>
+                                            <div id="seg-1-2" class="seg-content" style="display: none;">这是视图二的内容。</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">Tabs (标签页)</h2>
+                            <p class="term-definition">通常紧贴在页面顶部（Header）的下方，用于切换子版块内容。</p>
+                            <div class="example-container items-center">
+                                <div class="phone-simulator">
+                                    <div class="h-12 bg-white border-b flex items-center justify-center font-bold">页面标题</div>
+                                    <div class="border-b border-gray-200 bg-white">
+                                        <nav class="flex justify-around" id="mobile-tabs-1">
+                                            <button class="flex-1 py-2 px-4 border-b-2 border-indigo-600 text-indigo-600 font-medium" data-target="mtab-1-1">动态</button>
+                                            <button class="flex-1 py-2 px-4 border-b-2 border-transparent text-gray-500" data-target="mtab-1-2">收藏</button>
+                                        </nav>
+                                    </div>
+                                    <div class="p-4">
+                                        <div id="mtab-1-1" class="mtab-content">这是“动态”标签页的内容。</div>
+                                        <div id="mtab-1-2" class="mtab-content" style="display: none;">这是“收藏”标签页的内容。</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">Navigation Drawer (导航抽屉 / 汉堡菜单)</h2>
+                            <p class="term-definition">从屏幕侧边滑出的一个菜单，承载了大量非核心的导航入口。</p>
+                            <div class="example-container items-center">
+                                <div class="phone-simulator" id="phone-sim-4">
+                                    <div class="h-12 bg-white border-b flex items-center px-4 font-bold">
+                                        <button class="text-xl" data-target="drawer-1">☰</button>
+                                    </div>
+                                    <div class="p-4">点击汉堡菜单打开抽屉。</div>
+                                    <div class="phone-drawer-overlay" id="drawer-1">
+                                        <div class="phone-drawer-content p-4">
+                                            <h3 class="font-bold text-lg mb-4">菜单</h3>
+                                            <a href="#" class="block py-2">菜单项一</a>
+                                            <a href="#" class="block py-2">菜单项二</a>
+                                            <a href="#" class="block py-2">设置</a>
+                                            <button class="mt-4 text-sm" data-close="drawer-1">关闭</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <section id="section-2-4" class="scroll-target">
+                        <h1 class="text-3xl font-bold mb-6">4. 系统与信息提示</h1>
+
+                        <div class="term-card">
+                            <h2 class="term-title">Snackbar (轻量提示 / 底部通知)</h2>
+                            <p class="term-definition">从屏幕底部弹出的简短（且通常是临时的）信息条。</p>
+                            <div class="example-container items-center">
+                                <div class="phone-simulator">
+                                    <div class="phone-content">
+                                        <button id="show-snackbar" class="bg-indigo-600 text-white py-2 px-4 rounded-md w-full">显示 Snackbar</button>
+                                    </div>
+                                    <div class="phone-snackbar">已添加到收藏夹。<span class="text-blue-800">撤销</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">Toast (吐司提示)</h2>
+                            <p class="term-definition">在屏幕中下部浮现的纯文本小黑框，自动消失。</p>
+                            <div class="example-container items-center">
+                                <div class="phone-simulator">
+                                    <div class="phone-content">
+                                        <button id="show-toast" class="bg-indigo-600 text-white py-2 px-4 rounded-md w-full">显示 Toast</button>
+                                    </div>
+                                    <div class="phone-toast">已复制到剪贴板</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="term-card">
+                            <h2 class="term-title">Badge (徽标 / 红点)</h2>
+                            <p class="term-definition">附着在组件角落的小圆点或数字，用于提示新内容。</p>
+                            <div class="example-container items-center">
+                                <div class="phone-simulator">
+                                    <div class="phone-content"></div>
+                                    <div class="phone-bottom-nav">
+                                        <div class="text-center text-gray-500">🏠<br><span class="text-xs">首页</span></div>
+                                        <div class="text-center text-gray-500 relative">
+                                            <span class="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+                                            ✉️<br><span class="text-xs">消息</span>
+                                        </div>
+                                        <div class="text-center text-gray-500 relative">
+                                            <span class="absolute -top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+                                            👤<br><span class="text-xs">我的</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-20">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h2 class="text-xl font-bold mb-4">这是一个模态框</h2>
+            <p class="text-gray-600 mb-6">它会覆盖在主内容之上，强制用户进行交互。用于确认删除、重要提示等。</p>
+            <button id="close-modal" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md w-full">关闭</M>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.getElementById('sidebar');
+            const menuToggle = document.getElementById('menu-toggle');
+            const mainContent = document.querySelector('main');
+            
+            const partToggles = document.querySelectorAll('.part-toggle');
+            const partContents = document.querySelectorAll('.part-content');
+            const partLinksContainers = document.querySelectorAll('.part-links');
+            const allSidebarLinks = document.querySelectorAll('.sidebar-link');
+            
+            const scrollOffset = 48;
+
+            function updateScrollSpy() {
+                const visibleContent = document.querySelector('.part-content.active');
+                if (!visibleContent) return;
+
+                const scrollTargets = visibleContent.querySelectorAll('.scroll-target');
+                const currentScroll = mainContent.scrollTop;
+                let activeTargetId = null;
+
+                for (let i = scrollTargets.length - 1; i >= 0; i--) {
+                    const target = scrollTargets[i];
+                    if (currentScroll >= target.offsetTop - scrollOffset) {
+                        activeTargetId = target.id;
+                        break;
+                    }
+                }
+
+                if (activeTargetId === null && scrollTargets.length > 0) {
+                     activeTargetId = scrollTargets[0].id;
+                }
+
+                allSidebarLinks.forEach(link => {
+                    link.classList.toggle('active', link.dataset.scrollTarget === activeTargetId);
+                });
+            }
+
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('hidden');
+                sidebar.classList.toggle('block');
+                sidebar.classList.toggle('w-full');
+            });
+
+            partToggles.forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    const targetId = toggle.dataset.target;
+                    
+                    partContents.forEach(content => {
+                        content.classList.toggle('hidden', content.id !== targetId);
+                        content.classList.toggle('active', content.id === targetId);
+                    });
+                    
+                    partLinksContainers.forEach(linksContainer => {
+                        linksContainer.classList.toggle('hidden', linksContainer.id !== `${targetId.replace('-content', '-links')}`);
+                    });
+
+                    partToggles.forEach(t => {
+                        t.classList.toggle('active', t === toggle);
+                    });
+                    
+                    mainContent.scrollTop = 0;
+                    updateScrollSpy(); 
+                });
+            });
+
+            allSidebarLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const targetId = link.getAttribute('href').substring(1);
+                    const targetSection = document.getElementById(targetId);
+                    if (!targetSection) return;
+
+                    const parentPart = targetSection.closest('.part-content');
+
+                    if (parentPart && parentPart.classList.contains('hidden')) {
+                        e.preventDefault();
+                        document.querySelector(`.part-toggle[data-target="${parentPart.id}"]`).click();
+                        
+                        setTimeout(() => {
+                            targetSection.scrollIntoView({ behavior: 'smooth' });
+                            updateScrollSpy();
+                        }, 50);
+                    } else {
+                        e.preventDefault();
+                        targetSection.scrollIntoView({ behavior: 'smooth' });
+                        if (sidebar.classList.contains('block') && !sidebar.classList.contains('md:block')) {
+                            sidebar.classList.add('hidden');
+                            sidebar.classList.remove('block');
+                        }
+                    }
+                });
+            });
+
+            mainContent.addEventListener('scroll', updateScrollSpy);
+            
+            document.querySelector('.part-toggle.active').click();
+            updateScrollSpy();
+            
+            // --- 示例交互 ---
+
+            // 1.1 反馈按钮
+            const feedbackButton = document.getElementById('feedback-button');
+            const feedbackMessage = document.getElementById('feedback-message');
+            feedbackButton.addEventListener('click', () => {
+                feedbackMessage.textContent = '已点击！(这就是反馈)';
+                setTimeout(() => { feedbackMessage.textContent = ''; }, 2000);
+            });
+
+            // 1.1 设计哲学切换
+            const philosophyBox = document.getElementById('philosophy-box');
+            const philosophyToggle = document.getElementById('philosophy-toggle');
+            let isFlat = false;
+            philosophyToggle.addEventListener('click', () => {
+                isFlat = !isFlat;
+                if (isFlat) {
+                    philosophyBox.style.background = '#4f46e5';
+                    philosophyBox.style.boxShadow = 'none';
+                    philosophyBox.textContent = '扁平';
+                    philosophyToggle.textContent = '切换到拟物化';
+                } else {
+                    philosophyBox.style.background = 'linear-gradient(145deg, #f0f0f0, #cacaca)';
+                    philosophyBox.style.boxShadow = '10px 10px 20px #bebebe, -10px -10px 20px #ffffff';
+                    philosophyBox.textContent = '拟物';
+                    philosophyToggle.textContent = '切换到扁平化';
+                }
+            });
+
+            // 1.3 开关
+            const toggleButton = document.getElementById('toggle-button');
+            toggleButton.addEventListener('click', () => {
+                const isToggled = toggleButton.dataset.toggled === 'true';
+                if (!isToggled) {
+                    toggleButton.dataset.toggled = 'true';
+                    toggleButton.classList.remove('bg-gray-300');
+                    toggleButton.classList.add('bg-indigo-600');
+                    toggleButton.firstElementChild.style.transform = 'translateX(24px)';
+                } else {
+                    toggleButton.dataset.toggled = 'false';
+                    toggleButton.classList.add('bg-gray-300');
+                    toggleButton.classList.remove('bg-indigo-600');
+                    toggleButton.firstElementChild.style.transform = 'translateX(0px)';
+                }
+            });
+            
+            // 1.3 滑块
+            const sliderInput = document.getElementById('slider-input');
+            const sliderValue = document.getElementById('slider-value');
+            sliderInput.addEventListener('input', (e) => {
+                sliderValue.textContent = e.target.value;
+            });
+            
+            // 1.3 标签页
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabContainer = button.closest('.w-full');
+                    const tabButtons = tabContainer.querySelectorAll('.tab-button');
+                    const tabContents = tabContainer.querySelectorAll('.tab-content');
+
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('active', 'border-indigo-600', 'text-indigo-600', 'font-medium');
+                        btn.classList.add('border-transparent', 'text-gray-500');
+                    });
+                    button.classList.add('active', 'border-indigo-600', 'text-indigo-600', 'font-medium');
+                    button.classList.remove('border-transparent', 'text-gray-500');
+                    
+                    tabContents.forEach(content => {
+                        content.style.display = (content.id === button.dataset.target) ? 'block' : 'none';
+                    });
+                });
+            });
+
+            // 1.3 模态框
+            const modalOverlay = document.getElementById('modal-overlay');
+            const openModal = document.getElementById('open-modal');
+            const closeModal = document.getElementById('close-modal');
+            openModal.addEventListener('click', () => {
+                modalOverlay.style.display = 'flex';
+            });
+            closeModal.addEventListener('click', () => {
+                modalOverlay.style.display = 'none';
+            });
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) {
+                    modalOverlay.style.display = 'none';
+                }
+            });
+            
+            // 1.3 工具提示
+            const tooltipButton = document.getElementById('tooltip-button');
+            const tooltip = document.getElementById('tooltip');
+            tooltipButton.addEventListener('mouseenter', () => {
+                tooltip.style.display = 'block';
+            });
+            tooltipButton.addEventListener('mouseleave', () => {
+                tooltip.style.display = 'none';
+            });
+
+            // 1.3 折叠面板
+            const accordions = document.querySelectorAll('.accordion-toggle');
+            accordions.forEach(accordion => {
+                accordion.addEventListener('click', () => {
+                    const content = accordion.nextElementSibling;
+                    const isOpen = content.style.display === 'block';
+                    if (isOpen) {
+                        content.style.display = 'none';
+                        accordion.querySelector('span:last-child').textContent = '+';
+                    } else {
+                        content.style.display = 'block';
+                        accordion.querySelector('span:last-child').textContent = '-';
+                    }
+                });
+            });
+
+            // 1.4 字体排印
+            const typoExample = document.getElementById('typography-example');
+            let currentSize = 16;
+            let currentWeight = 400;
+            document.getElementById('font-bigger').addEventListener('click', () => {
+                currentSize += 2;
+                typoExample.style.fontSize = `${currentSize}px`;
+            });
+            document.getElementById('font-smaller').addEventListener('click', () => {
+                currentSize -= 2;
+                typoExample.style.fontSize = `${currentSize}px`;
+            });
+            document.getElementById('font-bolder').addEventListener('click', () => {
+                currentWeight = Math.min(700, currentWeight + 100);
+                typoExample.style.fontWeight = currentWeight;
+            });
+            document.getElementById('font-lighter').addEventListener('click', () => {
+                currentWeight = Math.max(300, currentWeight - 100);
+                typoExample.style.fontWeight = currentWeight;
+            });
+
+            // 1.5 微交互
+            const likeButton = document.getElementById('like-button');
+            likeButton.addEventListener('click', () => {
+                if (likeButton.textContent === '♡') {
+                    likeButton.textContent = '❤️';
+                    likeButton.style.transform = 'scale(1.3)';
+                } else {
+                    likeButton.textContent = '♡';
+                    likeButton.style.transform = 'scale(1.0)';
+                }
+                setTimeout(() => { likeButton.style.transform = 'scale(1.0)'; }, 150);
+            });
+            
+            // 1.5 动画
+            const animBox = document.getElementById('animation-box');
+            let isMoved = false;
+            document.getElementById('animation-trigger').addEventListener('click', () => {
+                if (isMoved) {
+                    animBox.style.transform = 'translateX(0px) rotate(0deg)';
+                    animBox.style.backgroundColor = '#6366f1';
+                } else {
+                    animBox.style.transform = 'translateX(100px) rotate(90deg)';
+                    animBox.style.backgroundColor = '#ec4899';
+                }
+                isMoved = !isMoved;
+            });
+
+            // --- 手机模拟器交互 ---
+
+            // 2.2 弹出层
+            document.querySelectorAll('[data-target]').forEach(button => {
+                const targetId = button.dataset.target;
+                const targetElement = document.getElementById(targetId);
+                if (targetElement && (
+                    targetElement.classList.contains('phone-action-sheet') || 
+                    targetElement.classList.contains('phone-bottom-sheet') ||
+                    targetElement.classList.contains('phone-modal-overlay') ||
+                    targetElement.classList.contains('phone-drawer-overlay'))) {
+                    
+                    button.addEventListener('click', () => {
+                        targetElement.style.display = 'flex';
+                    });
+                }
+            });
+            
+            document.querySelectorAll('[data-close]').forEach(button => {
+                const targetId = button.dataset.close;
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    button.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        targetElement.style.display = 'none';
+                    });
+                }
+            });
+            
+            document.querySelectorAll('.phone-action-sheet, .phone-bottom-sheet, .phone-modal-overlay, .phone-drawer-overlay').forEach(overlay => {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.style.display = 'none';
+                    }
+                });
+            });
+
+            // 2.3 分段控件
+            const segmentedControl = document.getElementById('segmented-control-1');
+            if(segmentedControl) {
+                const segButtons = segmentedControl.querySelectorAll('button');
+                const segContents = segmentedControl.parentElement.querySelectorAll('.seg-content');
+                segButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        segButtons.forEach(btn => {
+                            btn.classList.remove('bg-white', 'shadow', 'font-medium');
+                            btn.classList.add('text-gray-600');
+                        });
+                        button.classList.add('bg-white', 'shadow', 'font-medium');
+                        button.classList.remove('text-gray-600');
+                        
+                        segContents.forEach(content => {
+                            content.style.display = (content.id === button.dataset.target) ? 'block' : 'none';
+                        });
+                    });
+                });
+            }
+            
+            // 2.3 移动端标签页
+            const mobileTabs = document.getElementById('mobile-tabs-1');
+            if(mobileTabs) {
+                const mtabButtons = mobileTabs.querySelectorAll('button');
+                const mtabContents = mobileTabs.parentElement.parentElement.querySelectorAll('.mtab-content');
+                mtabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        mtabButtons.forEach(btn => {
+                            btn.classList.remove('border-indigo-600', 'text-indigo-600', 'font-medium');
+                            btn.classList.add('border-transparent', 'text-gray-500');
+                        });
+                        button.classList.add('border-indigo-600', 'text-indigo-600', 'font-medium');
+                        button.classList.remove('border-transparent', 'text-gray-500');
+                        
+                        mtabContents.forEach(content => {
+                            content.style.display = (content.id === button.dataset.target) ? 'block' : 'none';
+                        });
+                    });
+                });
+            }
+            
+            // 2.4 Snackbar & Toast
+            const showSnackbar = document.getElementById('show-snackbar');
+            if(showSnackbar) {
+                showSnackbar.addEventListener('click', () => {
+                    const snackbar = showSnackbar.closest('.phone-simulator').querySelector('.phone-snackbar');
+                    snackbar.style.display = 'block';
+                    setTimeout(() => { snackbar.style.display = 'none'; }, 3000);
+                });
+            }
+            
+            const showToast = document.getElementById('show-toast');
+            if(showToast) {
+                showToast.addEventListener('click', () => {
+                    const toast = showToast.closest('.phone-simulator').querySelector('.phone-toast');
+                    toast.style.display = 'block';
+                    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
